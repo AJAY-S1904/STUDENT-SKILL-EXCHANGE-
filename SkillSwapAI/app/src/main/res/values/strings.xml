@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">SkillSwap</string>
+    <string name="login">Login</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="forgot_password">Forgot Password</string>
+    <string name="email">Email Address</string>
+    <string name="password">Password</string>
+    <string name="name">Full Name</string>
+    <string name="college">College / University</string>
+    <string name="department">Department</string>
+    <string name="year">Year</string>
+    <string name="bio">Bio</string>
+    <string name="teach_skills">Skills I Can Teach</string>
+    <string name="learn_skills">Skills I Want to Learn</string>
+    <string name="find_match">Find Best Match</string>
+    <string name="send_request">Send Exchange Request</string>
+    <string name="accept">Accept</string>
+    <string name="reject">Reject</string>
+    <string name="cancel">Cancel</string>
+    <string name="skill_credits">Skill Credits</string>
+</resources>

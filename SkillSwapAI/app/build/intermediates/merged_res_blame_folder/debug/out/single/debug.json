@@ -1,0 +1,82 @@
+[
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/font_poppins_medium.ttf.flat",
+        "source": "com.skillswap.ai.app-main-82:/font/poppins_medium.ttf"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.skillswap.ai.app-main-82:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/xml_network_security_config.xml.flat",
+        "source": "com.skillswap.ai.app-main-82:/xml/network_security_config.xml"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/font_poppins.xml.flat",
+        "source": "com.skillswap.ai.app-main-82:/font/poppins.xml"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/mipmap-xxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/font_poppins_regular.ttf.flat",
+        "source": "com.skillswap.ai.app-main-82:/font/poppins_regular.ttf"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/font_poppins_bold.ttf.flat",
+        "source": "com.skillswap.ai.app-main-82:/font/poppins_bold.ttf"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/mipmap-xhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/mipmap-mdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/drawable-nodpi_ic_splash_logo.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/drawable-nodpi/ic_splash_logo.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/font_poppins_semibold.ttf.flat",
+        "source": "com.skillswap.ai.app-main-82:/font/poppins_semibold.ttf"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.skillswap.ai.app-main-82:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/mipmap-hdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "com.skillswap.ai.app-main-82:/mipmap-xxxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.skillswap.ai.app-merged_res-80:/drawable_ic_notification.xml.flat",
+        "source": "com.skillswap.ai.app-main-82:/drawable/ic_notification.xml"
+    }
+]
