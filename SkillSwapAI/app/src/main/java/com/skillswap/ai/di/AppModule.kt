@@ -2,8 +2,10 @@ package com.skillswap.ai.di
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
+import com.google.ai.client.generativeai.GenerativeModel
 import com.skillswap.ai.BuildConfig
 import com.skillswap.ai.data.remote.AiApiService
 import dagger.Module
@@ -41,6 +43,21 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFirebaseMessaging(): FirebaseMessaging = FirebaseMessaging.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    // ── Gemini ──────────────────────────────────────────────────────────────
+
+    @Provides
+    @Singleton
+    fun provideGenerativeModel(): GenerativeModel {
+        return GenerativeModel(
+            modelName = "gemini-3.5-flash",
+            apiKey = BuildConfig.GEMINI_API_KEY
+        )
+    }
 
     // ── Networking ────────────────────────────────────────────────────────────
 
