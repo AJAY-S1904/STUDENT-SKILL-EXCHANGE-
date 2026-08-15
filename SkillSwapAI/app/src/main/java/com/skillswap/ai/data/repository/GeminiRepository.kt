@@ -189,11 +189,16 @@ class GeminiRepository @Inject constructor(
             
             McqTest(
                 skill = skill,
-                questions = result.questions.map {
+                questions = result.questions.map { questionDto ->
+                    val validOptions = questionDto.options.mapIndexedNotNull { index, opt ->
+                        if (opt.isNotBlank()) Pair(index, opt) else null
+                    }
+                    val newCorrectAnswerIndex = validOptions.indexOfFirst { it.first == questionDto.correctAnswerIndex }
+                    
                     com.skillswap.ai.data.model.McqQuestion(
-                        question = it.question,
-                        options = it.options,
-                        correctAnswerIndex = it.correctAnswerIndex
+                        question = questionDto.question,
+                        options = validOptions.map { it.second },
+                        correctAnswerIndex = if (newCorrectAnswerIndex != -1) newCorrectAnswerIndex else 0
                     )
                 }
             )
