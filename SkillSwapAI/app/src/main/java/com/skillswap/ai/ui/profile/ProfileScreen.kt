@@ -41,6 +41,16 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val user = uiState.user
+    
+    var lastClickTime by remember { mutableStateOf(0L) }
+    val debounceClick = { action: () -> Unit ->
+        val now = System.currentTimeMillis()
+        if (now - lastClickTime > 1000) {
+            lastClickTime = now
+            action()
+        }
+    }
+
     var isEditing by remember { mutableStateOf(false) }
 
     var editName by remember(user?.name) { mutableStateOf(user?.name ?: "") }
@@ -230,6 +240,11 @@ fun ProfileScreen(
                             Text("My Skills", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             TextButton(onClick = onNavigateToSkills) { Text("Manage", color = Blue40) }
                         }
+                        Text(
+                            text = "Note: Only verified skills can be added to your teaching list.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         Spacer(Modifier.height(8.dp))
                         Text("📚 I Can Teach", style = MaterialTheme.typography.labelMedium, color = Blue40, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(6.dp))
@@ -237,7 +252,17 @@ fun ProfileScreen(
                             Text("No teaching skills added", style = MaterialTheme.typography.bodySmall, color = Neutral20)
                         } else {
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                user?.teachSkills?.forEach { SkillChip(it, isTeach = true) }
+                                val verifiedTeachSkills = user?.teachSkills?.filter { skill -> 
+                                    uiState.verifications.any { it.skillName.equals(skill, ignoreCase = true) && it.status == com.skillswap.ai.data.model.VerificationStatus.VERIFIED }
+                                } ?: emptyList()
+                                
+                                if (verifiedTeachSkills.isEmpty()) {
+                                    Text("No verified teaching skills", style = MaterialTheme.typography.bodySmall, color = Neutral20)
+                                } else {
+                                    verifiedTeachSkills.forEach { skill -> 
+                                        SkillChip(skill, isTeach = true, isVerified = true) 
+                                    }
+                                }
                             }
                         }
                         Spacer(Modifier.height(12.dp))
@@ -253,6 +278,8 @@ fun ProfileScreen(
                     }
                 }
                 }
+
+                // AI Tools & Portfolio (Removed)
             }
         }
 

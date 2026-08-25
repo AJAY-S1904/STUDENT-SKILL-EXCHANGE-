@@ -82,6 +82,7 @@ class AiMatchingViewModel @Inject constructor(
                             name = user.name,
                             teach_skills = user.teachSkills,
                             learning_skills = user.learnSkills,
+                            verified_skills = user.verifiedSkills,
                             experience = user.experienceLevel,
                             rating = user.rating,
                             availability = user.availability,

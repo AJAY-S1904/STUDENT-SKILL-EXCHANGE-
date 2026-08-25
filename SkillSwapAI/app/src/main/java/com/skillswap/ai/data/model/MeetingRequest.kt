@@ -16,8 +16,10 @@ data class MeetingRequest(
     val meetingTime: String = "",
     val meetingMode: String = "Online", // Online or Offline
     val meetingLocationOrLink: String = "",
+    val jitsiRoomName: String = "",
     val notes: String = "",
     val meetingStatus: String = MeetingStatus.PENDING.name,
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = System.currentTimeMillis(),
+    val completedAt: Long = 0L
 )

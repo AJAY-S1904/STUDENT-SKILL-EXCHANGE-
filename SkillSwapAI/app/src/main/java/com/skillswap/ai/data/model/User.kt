@@ -15,6 +15,7 @@ data class User(
     val bio: String = "",
     val teachSkills: List<String> = emptyList(),
     val learnSkills: List<String> = emptyList(),
+    val verifiedSkills: List<String> = emptyList(),
     val experienceLevel: String = "Beginner",
     val availability: List<String> = emptyList(),
     val rating: Double = 0.0,

@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -76,6 +77,7 @@ fun GradientBanner(
 fun SkillChip(
     skill: String,
     isTeach: Boolean = true,
+    isVerified: Boolean = false,
     onDelete: (() -> Unit)? = null
 ) {
     val bgColor = if (isTeach) Blue90 else Purple90
@@ -97,6 +99,14 @@ fun SkillChip(
                 color = contentColor,
                 fontWeight = FontWeight.SemiBold
             )
+            if (isVerified) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = "Verified",
+                    tint = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
             if (onDelete != null) {
                 Box(
                     modifier = Modifier
@@ -174,7 +184,10 @@ fun StudentCard(
                 )
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    user.teachSkills.take(2).forEach { SkillChip(skill = it, isTeach = true) }
+                    val verifiedTeachSkills = user.teachSkills.filter { skill -> user.verifiedSkills.any { it.equals(skill, ignoreCase = true) } }
+                    verifiedTeachSkills.take(2).forEach { skill ->
+                        SkillChip(skill = skill, isTeach = true, isVerified = true) 
+                    }
                 }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -361,7 +374,8 @@ fun MeetingRequestCard(
     currentUserId: String,
     onAccept: (() -> Unit)? = null,
     onReject: (() -> Unit)? = null,
-    onGoToSession: (() -> Unit)? = null
+    onGoToSession: (() -> Unit)? = null,
+    onNavigateToMultiSession: ((String) -> Unit)? = null
 ) {
     val isSender = meeting.learnerId == currentUserId
     val otherName = if (isSender) meeting.teacherName else meeting.learnerName
@@ -439,14 +453,25 @@ fun MeetingRequestCard(
                     }
                 }
             } else if (meeting.meetingStatus == com.skillswap.ai.data.model.MeetingStatus.CONFIRMED.name) {
-                if (onGoToSession != null) {
+                if (onGoToSession != null || onNavigateToMultiSession != null) {
                     Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = onGoToSession,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Blue40)
-                    ) { Text("Go to Session", fontWeight = FontWeight.Bold) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (onGoToSession != null) {
+                            Button(
+                                onClick = onGoToSession,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Blue40)
+                            ) { Text("Go to Session", fontWeight = FontWeight.Bold, maxLines = 1) }
+                        }
+                        if (onNavigateToMultiSession != null) {
+                            OutlinedButton(
+                                onClick = { onNavigateToMultiSession(meeting.meetingId) },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) { Text("Manage Sessions", maxLines = 1) }
+                        }
+                    }
                 }
             }
         }
@@ -536,7 +561,9 @@ fun EmptyState(
     emoji: String,
     title: String,
     subtitle: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null
 ) {
     Column(
         modifier = modifier

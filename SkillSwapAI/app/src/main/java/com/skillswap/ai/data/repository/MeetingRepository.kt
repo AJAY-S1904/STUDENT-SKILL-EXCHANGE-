@@ -71,4 +71,26 @@ class MeetingRepository @Inject constructor(
             AuthResult.Error(e.message ?: "Failed to update status")
         }
     }
+
+    suspend fun updateJitsiRoomName(meetingId: String, roomName: String): AuthResult<Unit> {
+        return try {
+            meetingsRef.child(meetingId).child("jitsiRoomName").setValue(roomName).await()
+            AuthResult.Success(Unit)
+        } catch (e: Exception) {
+            AuthResult.Error(e.message ?: "Failed to update Jitsi room name")
+        }
+    }
+
+    suspend fun completeMeeting(meetingId: String): AuthResult<Unit> {
+        return try {
+            val updates = mapOf(
+                "meetingStatus" to MeetingStatus.COMPLETED.name,
+                "completedAt" to com.google.firebase.database.ServerValue.TIMESTAMP
+            )
+            meetingsRef.child(meetingId).updateChildren(updates).await()
+            AuthResult.Success(Unit)
+        } catch (e: Exception) {
+            AuthResult.Error(e.message ?: "Failed to complete meeting")
+        }
+    }
 }

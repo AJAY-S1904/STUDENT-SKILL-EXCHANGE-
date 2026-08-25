@@ -21,6 +21,7 @@ data class RatingUiState(
     val ratedUserId: String = "",
     val isLoading: Boolean = false,
     val isSubmitted: Boolean = false,
+    val alreadyRated: Boolean = false,
     val error: String? = null
 )
 
@@ -36,9 +37,16 @@ class RatingViewModel @Inject constructor(
     val uiState: StateFlow<RatingUiState> = _uiState.asStateFlow()
 
     fun loadSessionDetails(sessionId: String) {
+        // Legacy
+    }
+
+    fun checkIfAlreadyRated(meetingId: String) {
         viewModelScope.launch {
-            // In real app: load session to determine who to rate
-            // Simplified here
+            val uid = authRepository.currentUserId
+            val hasRated = ratingRepository.hasRatedMeeting(uid, meetingId)
+            if (hasRated) {
+                _uiState.update { it.copy(alreadyRated = true) }
+            }
         }
     }
 
@@ -50,7 +58,7 @@ class RatingViewModel @Inject constructor(
         _uiState.update { it.copy(feedback = feedback) }
     }
 
-    fun submitRating(sessionId: String, ratedUserId: String, ratedUserName: String, skill: String) {
+    fun submitRating(meetingId: String, exchangeId: String, ratedUserId: String, ratedUserName: String, skill: String) {
         val stars = _uiState.value.stars
         if (stars == 0f) {
             _uiState.update { it.copy(error = "Please select a star rating") }
@@ -59,11 +67,19 @@ class RatingViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             val uid = authRepository.currentUserId
+            
+            // Final check
+            if (ratingRepository.hasRatedMeeting(uid, meetingId)) {
+                _uiState.update { it.copy(isLoading = false, alreadyRated = true) }
+                return@launch
+            }
+            
             val rater = userRepository.getUser(uid)
             val raterData = (rater as? AuthResult.Success)?.data
 
             val rating = Rating(
-                sessionId = sessionId,
+                meetingId = meetingId,
+                exchangeId = exchangeId,
                 raterId = uid,
                 raterName = raterData?.name ?: "",
                 raterProfilePic = raterData?.profilePictureUrl ?: "",

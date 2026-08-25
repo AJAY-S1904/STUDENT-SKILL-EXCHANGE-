@@ -14,6 +14,7 @@ data class CandidateProfile(
     val name: String,
     val teach_skills: List<String>,
     val learning_skills: List<String>,
+    val verified_skills: List<String>,
     val experience: String,
     val rating: Double,
     val availability: List<String>,
@@ -35,6 +36,7 @@ data class RecommendedStudent(
     val department: String,
     val teach_skills: List<String>,
     val learning_skills: List<String>,
+    val verified_skills: List<String>,
     val experience: String,
     val rating: Double,
     val availability: List<String>

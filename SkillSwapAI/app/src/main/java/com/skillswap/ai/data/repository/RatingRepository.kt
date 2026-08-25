@@ -63,4 +63,13 @@ class RatingRepository @Inject constructor(
             }
         } catch (_: Exception) { false }
     }
+
+    suspend fun hasRatedMeeting(raterId: String, meetingId: String): Boolean {
+        return try {
+            val snapshot = ratingsRef.orderByChild("meetingId").equalTo(meetingId).get().await()
+            snapshot.children.any { child ->
+                child.child("raterId").getValue(String::class.java) == raterId
+            }
+        } catch (_: Exception) { false }
+    }
 }

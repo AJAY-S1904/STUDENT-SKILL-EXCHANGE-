@@ -28,6 +28,7 @@ import com.skillswap.ai.ui.requests.RequestsScreen
 import com.skillswap.ai.ui.search.SearchScreen
 import com.skillswap.ai.ui.sessions.SessionsScreen
 import com.skillswap.ai.ui.skills.SkillManagementScreen
+import com.skillswap.ai.ui.tools.ToolsScreen
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 object Routes {
@@ -37,6 +38,7 @@ object Routes {
     const val DASHBOARD = "dashboard"
     const val SEARCH = "search"
     const val REQUESTS = "requests"
+    const val EXCHANGE_DETAIL = "exchange_detail/{exchangeId}"
     const val NOTIFICATIONS = "notifications"
     const val PROFILE = "profile"
     const val STUDENT_PROFILE = "student_profile/{studentId}"
@@ -44,10 +46,35 @@ object Routes {
     const val SKILL_MANAGEMENT = "skill_management"
     const val SESSIONS = "sessions"
     const val CREDITS = "credits"
-    const val RATING = "rating/{sessionId}/{ratedUserId}/{ratedUserName}/{skill}"
+    const val RATING = "rating/{meetingId}/{exchangeId}/{ratedUserId}/{ratedUserName}/{skill}"
+    const val SESSION_COMPLETED = "session_completed/{exchangeId}/{meetingId}"
+    
+    const val TOOLS = "tools"
+    const val AI_ANALYSIS_HISTORY = "ai_analysis_history"
+    const val NEW_AI_ANALYSIS = "new_ai_analysis"
+    const val SKILL_GAP = "skill_gap/{analysisId}"
+    const val LEARNING_ROADMAP_HISTORY = "learning_roadmap_history"
+    const val LEARNING_ROADMAP = "learning_roadmap/{analysisId}"
+    const val MCQ_TEST = "mcq_test?skill={skill}"
+    const val SKILL_PORTFOLIO = "skill_portfolio"
+    const val MULTI_SESSION_MGMT = "multi_session_mgmt/{meetingId}"
 
-    fun ratingRoute(sessionId: String, ratedUserId: String, ratedUserName: String, skill: String): String {
-        return "rating/$sessionId/$ratedUserId/$ratedUserName/$skill"
+    fun mcqTestRoute(skill: String? = null): String {
+        return if (skill != null) "mcq_test?skill=$skill" else "mcq_test"
+    }
+    
+    fun exchangeDetailRoute(exchangeId: String) = "exchange_detail/$exchangeId"
+
+    fun ratingRoute(meetingId: String, exchangeId: String, ratedUserId: String, ratedUserName: String, skill: String): String {
+        return "rating/$meetingId/$exchangeId/$ratedUserId/$ratedUserName/$skill"
+    }
+    
+    fun sessionCompletedRoute(exchangeId: String, meetingId: String): String {
+        return "session_completed/$exchangeId/$meetingId"
+    }
+
+    fun multiSessionMgmtRoute(meetingId: String): String {
+        return "multi_session_mgmt/$meetingId"
     }
 }
 
@@ -74,7 +101,8 @@ fun AppNavigation(
     modifier: Modifier = Modifier,
     navController: NavHostController,
     startDestination: String,
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: AuthViewModel = hiltViewModel(),
+    aiFeaturesViewModel: com.skillswap.ai.ui.ai.AiFeaturesViewModel = hiltViewModel()
 ) {
     NavHost(
         modifier = modifier,
@@ -123,7 +151,8 @@ fun AppNavigation(
                 onNavigateToMatching = { navController.navigate(Routes.AI_MATCHING) },
                 onNavigateToStudentProfile = { studentId -> navController.navigate("student_profile/$studentId") },
                 onNavigateToNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
-                onNavigateToSessions = { navController.navigate(Routes.SESSIONS) }
+                onNavigateToSessions = { navController.navigate(Routes.SESSIONS) },
+                onNavigateToTools = { navController.navigate(Routes.TOOLS) }
             )
         }
 
@@ -133,7 +162,25 @@ fun AppNavigation(
 
         composable(Routes.REQUESTS) {
             RequestsScreen(
-                onNavigateToSessions = { navController.navigate(Routes.SESSIONS) }
+                onNavigateToSearch = { navController.navigate(Routes.SEARCH) },
+                onNavigateToDetail = { exchangeId -> navController.navigate(Routes.exchangeDetailRoute(exchangeId)) },
+                onNavigateToSessions = { navController.navigate(Routes.SESSIONS) },
+                onNavigateToMultiSession = { meetingId -> navController.navigate(Routes.multiSessionMgmtRoute(meetingId)) },
+                onNavigateToRating = { mId, eId, rUserId, rUserName, skill ->
+                    navController.navigate(Routes.ratingRoute(mId, eId, rUserId, rUserName, skill))
+                }
+            )
+        }
+
+        composable(Routes.EXCHANGE_DETAIL) { backStackEntry ->
+            val exchangeId = backStackEntry.arguments?.getString("exchangeId") ?: return@composable
+            com.skillswap.ai.ui.requests.ExchangeDetailScreen(
+                exchangeId = exchangeId,
+                onBack = { navController.popBackStack() },
+                onNavigateToMultiSession = { meetingId -> navController.navigate(Routes.multiSessionMgmtRoute(meetingId)) },
+                onNavigateToSessionCompleted = { exId, mId ->
+                    navController.navigate(Routes.sessionCompletedRoute(exId, mId))
+                }
             )
         }
 
@@ -188,7 +235,8 @@ fun AppNavigation(
 
         composable(Routes.SKILL_MANAGEMENT) {
             SkillManagementScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToMcqTest = { skill -> navController.navigate(Routes.mcqTestRoute(skill)) }
             )
         }
 
@@ -198,7 +246,9 @@ fun AppNavigation(
                     val uid = authViewModel.currentUserId
                     val ratedUserId = if (uid == session.teacherId) session.learnerId else session.teacherId
                     val ratedUserName = if (uid == session.teacherId) session.learnerName else session.teacherName
-                    navController.navigate(Routes.ratingRoute(session.id, ratedUserId, ratedUserName, session.skill))
+                    val meetingId = session.id // Or fetch meetingId
+                    val exchangeId = session.requestId
+                    navController.navigate(Routes.ratingRoute(meetingId, exchangeId, ratedUserId, ratedUserName, session.skill))
                 }
             )
         }
@@ -210,17 +260,144 @@ fun AppNavigation(
         composable(
             route = Routes.RATING,
             arguments = listOf(
-                navArgument("sessionId") { type = NavType.StringType },
+                navArgument("meetingId") { type = NavType.StringType },
+                navArgument("exchangeId") { type = NavType.StringType },
                 navArgument("ratedUserId") { type = NavType.StringType },
                 navArgument("ratedUserName") { type = NavType.StringType },
                 navArgument("skill") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             RatingScreen(
-                sessionId = backStackEntry.arguments?.getString("sessionId") ?: "",
+                meetingId = backStackEntry.arguments?.getString("meetingId") ?: "",
+                exchangeId = backStackEntry.arguments?.getString("exchangeId") ?: "",
                 ratedUserId = backStackEntry.arguments?.getString("ratedUserId") ?: "",
                 ratedUserName = backStackEntry.arguments?.getString("ratedUserName") ?: "",
                 skill = backStackEntry.arguments?.getString("skill") ?: "",
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Routes.SESSION_COMPLETED,
+            arguments = listOf(
+                navArgument("exchangeId") { type = NavType.StringType },
+                navArgument("meetingId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val exchangeId = backStackEntry.arguments?.getString("exchangeId") ?: return@composable
+            val meetingId = backStackEntry.arguments?.getString("meetingId") ?: return@composable
+            com.skillswap.ai.ui.sessions.SessionCompletedScreen(
+                exchangeId = exchangeId,
+                meetingId = meetingId,
+                onNavigateToRating = { mId, eId, rUserId, rUserName, skill ->
+                    navController.navigate(Routes.ratingRoute(mId, eId, rUserId, rUserName, skill)) {
+                        popUpTo(Routes.SESSION_COMPLETED) { inclusive = true }
+                    }
+                },
+                onNavigateToRequests = {
+                    navController.navigate(Routes.REQUESTS) {
+                        popUpTo(Routes.SESSION_COMPLETED) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Routes.TOOLS) {
+            ToolsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCareerAnalysis = { navController.navigate(Routes.AI_ANALYSIS_HISTORY) },
+                onNavigateToLearningRoadmap = { navController.navigate(Routes.LEARNING_ROADMAP_HISTORY) },
+                onNavigateToSkillPortfolio = { navController.navigate(Routes.SKILL_PORTFOLIO) }
+            )
+        }
+
+        composable(Routes.AI_ANALYSIS_HISTORY) {
+            com.skillswap.ai.ui.ai.AiCareerAnalysisHistoryScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToNewAnalysis = { navController.navigate(Routes.NEW_AI_ANALYSIS) },
+                onNavigateToAnalysis = { analysisId -> navController.navigate("skill_gap/$analysisId") },
+                onNavigateToRoadmap = { analysisId -> 
+                    navController.navigate("learning_roadmap/$analysisId") 
+                },
+                viewModel = aiFeaturesViewModel
+            )
+        }
+        
+        composable(Routes.NEW_AI_ANALYSIS) {
+            com.skillswap.ai.ui.ai.NewAnalysisScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToHistory = {
+                    navController.navigate(Routes.AI_ANALYSIS_HISTORY) {
+                        popUpTo(Routes.AI_ANALYSIS_HISTORY) { inclusive = true }
+                    }
+                },
+                viewModel = aiFeaturesViewModel
+            )
+        }
+
+        composable(
+            route = Routes.SKILL_GAP,
+            arguments = listOf(navArgument("analysisId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val analysisId = backStackEntry.arguments?.getString("analysisId") ?: ""
+            com.skillswap.ai.ui.ai.SkillGapScreen(
+                analysisId = analysisId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToRoadmap = { id ->
+                    navController.navigate("learning_roadmap/$id")
+                },
+                viewModel = aiFeaturesViewModel
+            )
+        }
+
+        composable(Routes.LEARNING_ROADMAP_HISTORY) {
+            com.skillswap.ai.ui.ai.LearningRoadmapHistoryScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToRoadmap = { id -> navController.navigate("learning_roadmap/$id") },
+                viewModel = aiFeaturesViewModel
+            )
+        }
+
+        composable(
+            route = Routes.LEARNING_ROADMAP,
+            arguments = listOf(navArgument("analysisId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val analysisId = backStackEntry.arguments?.getString("analysisId") ?: ""
+            com.skillswap.ai.ui.ai.LearningRoadmapScreen(
+                analysisId = analysisId,
+                onNavigateBack = { navController.popBackStack() },
+                viewModel = aiFeaturesViewModel
+            )
+        }
+
+        composable(
+            route = Routes.MCQ_TEST,
+            arguments = listOf(navArgument("skill") { 
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) { backStackEntry ->
+            val skill = backStackEntry.arguments?.getString("skill")
+            com.skillswap.ai.ui.ai.McqTestScreen(
+                initialSkill = skill,
+                onNavigateBack = { navController.popBackStack() },
+                viewModel = aiFeaturesViewModel
+            )
+        }
+
+        composable(Routes.SKILL_PORTFOLIO) {
+            com.skillswap.ai.ui.portfolio.SkillPortfolioScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Routes.MULTI_SESSION_MGMT,
+            arguments = listOf(navArgument("meetingId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            com.skillswap.ai.ui.sessions.MultiSessionManagementScreen(
+                meetingId = backStackEntry.arguments?.getString("meetingId") ?: "",
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -3,8 +3,10 @@ package com.skillswap.ai.ui.profile
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.skillswap.ai.data.model.SkillVerification
 import com.skillswap.ai.data.model.User
 import com.skillswap.ai.data.repository.AuthRepository
+import com.skillswap.ai.data.repository.FirestoreRepository
 import com.skillswap.ai.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -13,6 +15,7 @@ import javax.inject.Inject
 
 data class ProfileUiState(
     val user: User? = null,
+    val verifications: List<SkillVerification> = emptyList(),
     val isLoading: Boolean = false,
     val successMessage: String? = null,
     val error: String? = null
@@ -22,7 +25,8 @@ data class ProfileUiState(
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val firestoreRepository: FirestoreRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -34,6 +38,14 @@ class ProfileViewModel @Inject constructor(
                 if (uid.isEmpty()) kotlinx.coroutines.flow.flowOf(null) else userRepository.getUserFlow(uid)
             }.collect { user ->
                 _uiState.update { it.copy(user = user) }
+                if (user != null) {
+                    try {
+                        val verifs = firestoreRepository.getSkillVerifications(user.uid)
+                        _uiState.update { it.copy(verifications = verifs) }
+                    } catch (e: Exception) {
+                        // ignore error
+                    }
+                }
             }
         }
     }

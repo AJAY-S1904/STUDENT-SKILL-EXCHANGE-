@@ -446,12 +446,20 @@ fun AiRecommendationCard(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Can Teach You", style = MaterialTheme.typography.labelSmall, color = Blue40, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(4.dp))
-                        student.teach_skills.take(3).forEach { SkillChip(it, isTeach = true) }
+                        if (student.teach_skills.isEmpty()) {
+                            Text("None specified", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                        } else {
+                            student.teach_skills.take(3).forEach { SkillChip(it, isTeach = true) }
+                        }
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Wants to Learn", style = MaterialTheme.typography.labelSmall, color = Purple40, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(4.dp))
-                        student.learning_skills.take(3).forEach { SkillChip(it, isTeach = false) }
+                        if (student.learning_skills.isEmpty()) {
+                            Text("None specified", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                        } else {
+                            student.learning_skills.take(3).forEach { SkillChip(it, isTeach = false) }
+                        }
                     }
                 }
 

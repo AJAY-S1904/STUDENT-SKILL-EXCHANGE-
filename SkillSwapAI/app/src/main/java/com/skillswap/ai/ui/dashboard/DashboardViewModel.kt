@@ -57,7 +57,7 @@ class DashboardViewModel @Inject constructor(
                     userRepository.getUserFlow(uid).flatMapLatest { currentUser ->
                         val userDept = currentUser?.department ?: ""
                         userRepository.getAllUsersFlow().map { users ->
-                            users.filter { it.uid != uid && it.department.equals(userDept, ignoreCase = true) }
+                            users.filter { it.uid != uid }
                         }
                     }
                 }

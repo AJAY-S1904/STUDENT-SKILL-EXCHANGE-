@@ -23,7 +23,9 @@ data class RequestsUiState(
     val isLoading: Boolean = false,
     val selectedTab: Int = 0,        // 0 = Received, 1 = Sent
     val successMessage: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val learningSessionsForMeeting: List<com.skillswap.ai.data.model.LearningSession> = emptyList(),
+    val ratedMeetingIds: Set<String> = emptySet()
 )
 
 @HiltViewModel
@@ -34,11 +36,16 @@ class RequestViewModel @Inject constructor(
     private val notificationRepository: NotificationRepository,
     private val creditRepository: CreditRepository,
     private val sessionRepository: SessionRepository,
-    private val meetingRepository: MeetingRepository
+    private val meetingRepository: MeetingRepository,
+    private val firestoreRepository: com.skillswap.ai.data.repository.FirestoreRepository,
+    private val ratingRepository: com.skillswap.ai.data.repository.RatingRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RequestsUiState())
     val uiState: StateFlow<RequestsUiState> = _uiState.asStateFlow()
+
+    var conferenceJoined: Boolean = false
+    private val completedInThisSession = mutableSetOf<String>()
 
     val currentUserId: String get() = authRepository.currentUserId
 
@@ -67,9 +74,39 @@ class RequestViewModel @Inject constructor(
                 if (uid.isEmpty()) flowOf(emptyList()) else meetingRepository.getMeetingRequestsForUser(uid)
             }.collect { meetings ->
                 _uiState.update { it.copy(meetingRequests = meetings) }
+                
+                // After meetings update, also fetch ratings to determine ratedMeetingIds
+                fetchRatedMeetings(meetings)
             }
         }
     }
+
+    private fun fetchRatedMeetings(meetings: List<com.skillswap.ai.data.model.MeetingRequest>) {
+        viewModelScope.launch {
+            val uid = authRepository.currentUserId
+            if (uid.isEmpty()) return@launch
+            
+            val ratedSet = mutableSetOf<String>()
+            meetings.filter { it.meetingStatus == com.skillswap.ai.data.model.MeetingStatus.COMPLETED.name }.forEach { m ->
+                if (ratingRepository.hasRatedMeeting(uid, m.meetingId)) {
+                    ratedSet.add(m.meetingId)
+                }
+            }
+            _uiState.update { it.copy(ratedMeetingIds = ratedSet) }
+        }
+    }
+
+    fun refreshRatings() {
+        fetchRatedMeetings(_uiState.value.meetingRequests)
+    }
+
+    fun fetchLearningSessionsForMeeting(meetingId: String) {
+        viewModelScope.launch {
+            val sessions = firestoreRepository.getLearningSessionsForMeeting(meetingId)
+            _uiState.update { it.copy(learningSessionsForMeeting = sessions) }
+        }
+    }
+
 
     fun sendRequest(
         receiverId: String,
@@ -179,7 +216,7 @@ class RequestViewModel @Inject constructor(
             // instead of taking an upfront escrow that causes failure for new users.
 
             val link = if (meeting.meetingMode == "Online") {
-                if (meeting.meetingLocationOrLink.isBlank()) "https://meet.ffmuc.net/SkillSwap_${java.util.UUID.randomUUID().toString().take(8)}" 
+                if (meeting.meetingLocationOrLink.isBlank()) "https://meet.jit.si/exchange_${meeting.meetingId}" 
                 else meeting.meetingLocationOrLink
             } else meeting.meetingLocationOrLink
 
@@ -216,6 +253,11 @@ class RequestViewModel @Inject constructor(
             sessionRepository.createSession(session2)
 
             meetingRepository.updateMeetingStatus(meeting.meetingId, com.skillswap.ai.data.model.MeetingStatus.CONFIRMED)
+            
+            // Generate and save deterministic Jitsi room name
+            val roomName = "exchange_${meeting.meetingId}"
+            meetingRepository.updateJitsiRoomName(meeting.meetingId, roomName)
+
             notificationRepository.sendAcceptedNotification(
                 request.senderId, authRepository.currentUserId, link, request.id
             )
@@ -239,5 +281,41 @@ class RequestViewModel @Inject constructor(
 
     fun selectTab(tab: Int) {
         _uiState.update { it.copy(selectedTab = tab) }
+    }
+
+    fun generateAndSaveJitsiRoomName(meetingId: String) {
+        viewModelScope.launch {
+            val roomName = "exchange_$meetingId"
+            meetingRepository.updateJitsiRoomName(meetingId, roomName)
+        }
+    }
+
+    fun completeMeetingSession(exchangeId: String, meetingId: String) {
+        if (completedInThisSession.contains(meetingId)) return
+        completedInThisSession.add(meetingId)
+
+        viewModelScope.launch {
+            val meeting = _uiState.value.meetingRequests.find { it.meetingId == meetingId }
+            if (meeting?.meetingStatus == com.skillswap.ai.data.model.MeetingStatus.COMPLETED.name) {
+                return@launch // Already completed in backend
+            }
+            
+            // Mark Meeting as COMPLETED
+            meetingRepository.completeMeeting(meetingId)
+            
+            // Mark ExchangeRequest as COMPLETED
+            requestRepository.updateRequestStatus(exchangeId, RequestStatus.COMPLETED)
+
+            val request = _uiState.value.receivedRequests.find { it.id == exchangeId } 
+                ?: _uiState.value.sentRequests.find { it.id == exchangeId }
+
+            // Safely increment Portfolio sessions count for BOTH users
+            if (request != null) {
+                firestoreRepository.incrementSessionsCompleted(request.senderId)
+                firestoreRepository.incrementSessionsCompleted(request.receiverId)
+            } else {
+                firestoreRepository.incrementSessionsCompleted(currentUserId)
+            }
+        }
     }
 }

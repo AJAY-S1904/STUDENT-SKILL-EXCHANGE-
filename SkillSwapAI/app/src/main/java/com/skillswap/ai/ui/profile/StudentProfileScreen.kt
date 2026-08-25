@@ -88,11 +88,12 @@ fun StudentProfileScreen(
                             HorizontalDivider()
 
                             Text("📚 Can Teach", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            if (student.teachSkills.isEmpty()) {
+                            val verifiedTeachSkills = student.teachSkills.filter { skill -> student.verifiedSkills.any { it.equals(skill, ignoreCase = true) } }
+                            if (verifiedTeachSkills.isEmpty()) {
                                 Text("None added", style = MaterialTheme.typography.bodyMedium)
                             } else {
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    student.teachSkills.forEach { SkillChip(it, isTeach = true) }
+                                    verifiedTeachSkills.forEach { SkillChip(it, isTeach = true, isVerified = true) }
                                 }
                             }
 

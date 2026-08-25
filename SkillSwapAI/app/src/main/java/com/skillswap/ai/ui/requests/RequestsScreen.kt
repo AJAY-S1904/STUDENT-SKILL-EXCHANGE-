@@ -4,9 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,24 +11,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.skillswap.ai.ui.components.*
+import com.skillswap.ai.ui.jitsi.JitsiHelper
 import com.skillswap.ai.ui.theme.Blue40
-import com.skillswap.ai.ui.theme.Purple40
+import com.skillswap.ai.data.model.ExchangeRequest
+import com.skillswap.ai.data.model.MeetingRequest
+
+data class UnifiedExchange(
+    val request: ExchangeRequest,
+    val meeting: MeetingRequest?
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestsScreen(
+    onNavigateToSearch: () -> Unit,
+    onNavigateToDetail: (String) -> Unit,
     onNavigateToSessions: () -> Unit,
+    onNavigateToMultiSession: (String) -> Unit,
+    onNavigateToRating: (String, String, String, String, String) -> Unit,
     viewModel: RequestViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val requests = if (uiState.selectedTab == 0) uiState.receivedRequests else uiState.sentRequests
-    val meetings = if (uiState.selectedTab == 0) 
-        uiState.meetingRequests.filter { it.teacherId == viewModel.currentUserId }
-    else 
-        uiState.meetingRequests.filter { it.learnerId == viewModel.currentUserId }
+    
+    // Unified requests based on selected tab
+    val unifiedExchanges = remember(uiState) {
+        val requests = if (uiState.selectedTab == 0) uiState.receivedRequests else uiState.sentRequests
+        requests.map { req ->
+            val meeting = uiState.meetingRequests.find { it.requestId == req.id }
+            UnifiedExchange(req, meeting)
+        }.sortedByDescending { it.request.updatedAt }
+    }
 
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
@@ -39,7 +55,7 @@ fun RequestsScreen(
     val timePickerState = rememberTimePickerState()
     
     var showScheduleDialog by remember { mutableStateOf(false) }
-    var selectedRequestToSchedule by remember { mutableStateOf<com.skillswap.ai.data.model.ExchangeRequest?>(null) }
+    var selectedRequestToSchedule by remember { mutableStateOf<ExchangeRequest?>(null) }
     
     var meetingMode by remember { mutableStateOf("Online") }
     var meetingLocationOrLink by remember { mutableStateOf("") }
@@ -47,6 +63,17 @@ fun RequestsScreen(
     var tempDate by remember { mutableStateOf("") }
     var tempTime by remember { mutableStateOf("") }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshRatings()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(uiState.error) {
         if (uiState.error != null) {
@@ -70,8 +97,8 @@ fun RequestsScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "${uiState.receivedRequests.size} received • ${uiState.sentRequests.size} sent",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Manage your skill exchanges",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(0.8f)
                 )
             }
@@ -89,10 +116,9 @@ fun RequestsScreen(
                 text = {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Received")
-                        if (uiState.receivedRequests.count { it.status == com.skillswap.ai.data.model.RequestStatus.PENDING.name } > 0) {
-                            Badge {
-                                Text("${uiState.receivedRequests.count { it.status == com.skillswap.ai.data.model.RequestStatus.PENDING.name }}")
-                            }
+                        val pendingCount = uiState.receivedRequests.count { it.status == com.skillswap.ai.data.model.RequestStatus.PENDING.name }
+                        if (pendingCount > 0) {
+                            Badge { Text("$pendingCount") }
                         }
                     }
                 }
@@ -104,57 +130,64 @@ fun RequestsScreen(
             )
         }
 
-        if (requests.isEmpty() && meetings.isEmpty()) {
+        if (unifiedExchanges.isEmpty()) {
             EmptyState(
                 emoji = if (uiState.selectedTab == 0) "📬" else "📤",
-                title = if (uiState.selectedTab == 0) "No requests received" else "No requests sent",
-                subtitle = if (uiState.selectedTab == 0)
-                    "When students send you requests or meetings, they'll appear here"
-                else
-                    "Find students and send skill exchange requests"
+                title = if (uiState.selectedTab == 0) "You don't have any incoming requests." else "You haven't sent any exchange requests.",
+                subtitle = "Connect with students to start exchanging skills.",
+                actionText = "Find Students",
+                onAction = onNavigateToSearch
             )
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (requests.isNotEmpty()) {
-                    item { Text("Skill Requests", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Blue40) }
-                }
-                items(requests, key = { "req_${it.id}" }) { request ->
-                    RequestCard(
-                        request = request,
+                items(unifiedExchanges, key = { it.request.id }) { exchange ->
+                    UnifiedExchangeCard(
+                        request = exchange.request,
+                        meeting = exchange.meeting,
                         currentUserId = viewModel.currentUserId,
-                        onAccept = { viewModel.acceptRequest(request) },
-                        onReject = { viewModel.rejectRequest(request.id) },
-                        onCancel = { viewModel.cancelRequest(request.id) },
-                        onViewMeeting = { 
-                            selectedRequestToSchedule = request
+                        onAcceptRequest = { viewModel.acceptRequest(exchange.request) },
+                        onDeclineRequest = { viewModel.rejectRequest(exchange.request.id) },
+                        onScheduleMeeting = {
+                            selectedRequestToSchedule = exchange.request
                             showScheduleDialog = true
-                        }
-                    )
-                }
-
-                if (meetings.isNotEmpty()) {
-                    item { Spacer(Modifier.height(8.dp)) }
-                    item { Text("Meeting Requests", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Purple40) }
-                }
-                items(meetings, key = { "meet_${it.meetingId}" }) { meeting ->
-                    MeetingRequestCard(
-                        meeting = meeting,
-                        currentUserId = viewModel.currentUserId,
-                        onAccept = {
-                            val req = uiState.receivedRequests.find { it.id == meeting.requestId } 
-                                ?: uiState.sentRequests.find { it.id == meeting.requestId }
-                            if (req != null) {
-                                viewModel.acceptMeeting(meeting, req)
+                        },
+                        onAcceptMeeting = {
+                            if (exchange.meeting != null) {
+                                viewModel.acceptMeeting(exchange.meeting, exchange.request)
                             }
                         },
-                        onReject = { viewModel.rejectMeeting(meeting.meetingId) },
-                        onGoToSession = onNavigateToSessions
+                        onChangeTime = {
+                            // Can reuse schedule dialog to propose new time
+                            selectedRequestToSchedule = exchange.request
+                            showScheduleDialog = true
+                        },
+                        onEnterSession = {
+                            if (exchange.meeting != null) {
+                                JitsiHelper.launchMeeting(
+                                    context = context,
+                                    meeting = exchange.meeting,
+                                    request = exchange.request,
+                                    currentUserId = viewModel.currentUserId
+                                )
+                            }
+                        },
+                        onRateExchange = {
+                            if (exchange.meeting != null) {
+                                val uid = viewModel.currentUserId
+                                val isSender = exchange.request.senderId == uid
+                                val ratedUserId = if (isSender) exchange.request.receiverId else exchange.request.senderId
+                                val ratedUserName = if (isSender) exchange.request.receiverName else exchange.request.senderName
+                                val skill = if (isSender) exchange.request.teachSkill else exchange.request.learnSkill
+                                onNavigateToRating(exchange.meeting.meetingId, exchange.request.id, ratedUserId, ratedUserName, skill)
+                            }
+                        },
+                        hasRated = exchange.meeting != null && uiState.ratedMeetingIds.contains(exchange.meeting.meetingId),
+                        onClick = { onNavigateToDetail(exchange.request.id) }
                     )
                 }
-                
                 item { Spacer(Modifier.height(80.dp)) }
             }
         }

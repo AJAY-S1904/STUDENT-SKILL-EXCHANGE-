@@ -24,7 +24,8 @@ import com.skillswap.ai.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RatingScreen(
-    sessionId: String,
+    meetingId: String,
+    exchangeId: String,
     ratedUserId: String,
     ratedUserName: String,
     skill: String,
@@ -32,6 +33,10 @@ fun RatingScreen(
     viewModel: RatingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(meetingId) {
+        viewModel.checkIfAlreadyRated(meetingId)
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         GradientBanner {
@@ -57,6 +62,17 @@ fun RatingScreen(
                 Text("🎉", fontSize = 80.sp)
                 Text("Rating Submitted!", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Text("Thank you for your feedback!", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface.copy(0.6f), textAlign = TextAlign.Center)
+                Spacer(Modifier.height(20.dp))
+                Button(onClick = onNavigateBack, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    Text("Go Back")
+                }
+                Spacer(Modifier.weight(1f))
+            } else if (uiState.alreadyRated) {
+                // Already Rated State
+                Spacer(Modifier.weight(1f))
+                Text("✅", fontSize = 80.sp)
+                Text("Already Rated", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text("You have already rated this exchange.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface.copy(0.6f), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(20.dp))
                 Button(onClick = onNavigateBack, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                     Text("Go Back")
@@ -140,10 +156,10 @@ fun RatingScreen(
                 }
 
                 Button(
-                    onClick = { viewModel.submitRating(sessionId, ratedUserId, ratedUserName, skill) },
+                    onClick = { viewModel.submitRating(meetingId, exchangeId, ratedUserId, ratedUserName, skill) },
                     modifier = Modifier.fillMaxWidth().height(54.dp),
                     shape = RoundedCornerShape(16.dp),
-                    enabled = !uiState.isLoading,
+                    enabled = !uiState.isLoading && uiState.stars > 0f,
                     colors = ButtonDefaults.buttonColors(containerColor = Purple40)
                 ) {
                     if (uiState.isLoading) {

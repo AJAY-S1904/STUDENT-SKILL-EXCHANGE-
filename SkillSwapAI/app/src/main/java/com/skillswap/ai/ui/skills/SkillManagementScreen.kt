@@ -38,6 +38,7 @@ val commonSkills = listOf(
 @Composable
 fun SkillManagementScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToMcqTest: (String) -> Unit,
     viewModel: SkillViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -45,6 +46,20 @@ fun SkillManagementScreen(
     var learnInput by remember { mutableStateOf("") }
     var showTeachSuggestions by remember { mutableStateOf(false) }
     var showLearnSuggestions by remember { mutableStateOf(false) }
+    
+    var skillToVerify by remember { mutableStateOf<String?>(null) }
+
+    val handleAddTeachSkill = { skill: String ->
+        val trimmed = skill.trim()
+        if (trimmed.isNotEmpty()) {
+            val isVerified = uiState.verifiedSkills.any { it.equals(trimmed, ignoreCase = true) }
+            if (isVerified) {
+                viewModel.addTeachSkill(trimmed)
+            } else {
+                skillToVerify = trimmed
+            }
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
@@ -87,7 +102,7 @@ fun SkillManagementScreen(
                             trailingIcon = {
                                 if (teachInput.isNotBlank()) {
                                     IconButton(onClick = {
-                                        viewModel.addTeachSkill(teachInput)
+                                        handleAddTeachSkill(teachInput)
                                         teachInput = ""
                                         showTeachSuggestions = false
                                     }) { Icon(Icons.Filled.Check, null, tint = Blue40) }
@@ -98,7 +113,7 @@ fun SkillManagementScreen(
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = {
-                                viewModel.addTeachSkill(teachInput)
+                                handleAddTeachSkill(teachInput)
                                 teachInput = ""
                                 showTeachSuggestions = false
                             }),
@@ -123,7 +138,7 @@ fun SkillManagementScreen(
                                             modifier = Modifier
                                                 .padding(vertical = 2.dp)
                                                 .clickable {
-                                                    viewModel.addTeachSkill(skill)
+                                                    handleAddTeachSkill(skill)
                                                     teachInput = ""
                                                     showTeachSuggestions = false
                                                 }
@@ -150,7 +165,8 @@ fun SkillManagementScreen(
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 uiState.teachSkills.forEach { skill ->
-                                    SkillChip(skill = skill, isTeach = true, onDelete = { viewModel.removeTeachSkill(skill) })
+                                    val isVerified = uiState.verifiedSkills.any { it.equals(skill, ignoreCase = true) }
+                                    SkillChip(skill = skill, isTeach = true, isVerified = isVerified, onDelete = { viewModel.removeTeachSkill(skill) })
                                 }
                             }
                         }
@@ -276,5 +292,27 @@ fun SkillManagementScreen(
         }
 
         item { Spacer(Modifier.height(80.dp)) }
+    }
+
+    if (skillToVerify != null) {
+        AlertDialog(
+            onDismissRequest = { skillToVerify = null },
+            title = { Text("Verification Required") },
+            text = { Text("This skill must be verified before you can teach it. Do you want to take the verification test now?") },
+            confirmButton = {
+                Button(onClick = {
+                    val skill = skillToVerify
+                    skillToVerify = null
+                    if (skill != null) onNavigateToMcqTest(skill)
+                }) {
+                    Text("Take Verification Test")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { skillToVerify = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

@@ -21,23 +21,48 @@ class AiRepository @Inject constructor(
             if (request.candidates.isEmpty()) {
                 return AuthResult.Error("No candidates available for matching")
             }
+
+            val myLearnSkills = request.learning_skills.map { it.lowercase() }
+            val myTeachSkills = request.teach_skills.map { it.lowercase() }
+
+            // Stage 1 - Hard Skill Filter
+            val eligibleCandidates = if (myLearnSkills.isNotEmpty()) {
+                request.candidates.filter { candidate ->
+                    val verifiedTeachSkills = candidate.teach_skills.filter { skill ->
+                        candidate.verified_skills.any { it.equals(skill, ignoreCase = true) }
+                    }.map { it.lowercase() }
+                    
+                    myLearnSkills.intersect(verifiedTeachSkills.toSet()).isNotEmpty()
+                }
+            } else {
+                request.candidates
+            }
+
+            if (eligibleCandidates.isEmpty()) {
+                return AuthResult.Error("No suitable matches found for your learning requests.")
+            }
             
-            // Simple heuristic to score candidates (Mocking AI logic locally)
-            var bestCandidate = request.candidates.first()
-            var highestScore = 0.0
+            // Stage 2 - AI Matching (Scoring)
+            var bestCandidate = eligibleCandidates.first()
+            var highestScore = -1.0
+            var bestMatchReasons = mutableListOf<String>()
             
-            for (candidate in request.candidates) {
+            for (candidate in eligibleCandidates) {
                 var score = 0.0
                 
-                // My learn skills match their teach skills
-                val learnMatch = request.learning_skills.map { it.lowercase() }
-                    .intersect(candidate.teach_skills.map { it.lowercase() }.toSet()).size
-                score += learnMatch * 30.0
+                val candidateVerifiedTeach = candidate.teach_skills.filter { skill ->
+                    candidate.verified_skills.any { it.equals(skill, ignoreCase = true) }
+                }
+
+                // My learn skills match their verified teach skills
+                val learnMatch = myLearnSkills
+                    .intersect(candidateVerifiedTeach.map { it.lowercase() }.toSet())
+                score += learnMatch.size * 40.0
                 
                 // My teach skills match their learn skills
-                val teachMatch = request.teach_skills.map { it.lowercase() }
-                    .intersect(candidate.learning_skills.map { it.lowercase() }.toSet()).size
-                score += teachMatch * 30.0
+                val teachMatch = myTeachSkills
+                    .intersect(candidate.learning_skills.map { it.lowercase() }.toSet())
+                score += teachMatch.size * 30.0
                 
                 // Rating bonus
                 score += candidate.rating * 2.0
@@ -45,6 +70,22 @@ class AiRepository @Inject constructor(
                 if (score > highestScore) {
                     highestScore = score
                     bestCandidate = candidate
+                    
+                    // Generate accurate reasons
+                    val reasons = mutableListOf<String>()
+                    if (learnMatch.isNotEmpty()) {
+                        reasons.add("Can teach your requested skill: ${learnMatch.first().replaceFirstChar { it.uppercase() }}")
+                    }
+                    if (teachMatch.isNotEmpty()) {
+                        reasons.add("Wants to learn what you teach")
+                    }
+                    if (candidate.rating >= 4.0) {
+                        reasons.add("Highly rated peer")
+                    }
+                    if (reasons.isEmpty()) {
+                        reasons.add("Compatible profile")
+                    }
+                    bestMatchReasons = reasons
                 }
             }
             
@@ -53,24 +94,26 @@ class AiRepository @Inject constructor(
             val random = java.util.Random(deterministicSeed)
             val percentage = max(highestScore, 65.0 + (random.nextDouble() * 25.0)).coerceAtMost(98.0)
             
+            val verifiedTeachSkills = bestCandidate.teach_skills.filter { skill ->
+                bestCandidate.verified_skills.any { it.equals(skill, ignoreCase = true) }
+            }
+
             val response = AiMatchResponse(
                 recommended_student = com.skillswap.ai.data.model.RecommendedStudent(
                     uid = bestCandidate.uid,
                     name = bestCandidate.name,
                     college = bestCandidate.college,
                     department = bestCandidate.department,
-                    teach_skills = bestCandidate.teach_skills,
+                    teach_skills = verifiedTeachSkills, // Only show verified teaching skills
                     learning_skills = bestCandidate.learning_skills,
+                    verified_skills = bestCandidate.verified_skills,
                     experience = bestCandidate.experience,
                     rating = bestCandidate.rating,
                     availability = bestCandidate.availability
                 ),
                 match_percentage = percentage,
-                compatibility_score = percentage, // Provide 0-100 instead of 0.0-1.0 so UI toInt() works correctly
-                reason = listOf(
-                    "Strong overlap in desired skills",
-                    "Highly rated peer"
-                )
+                compatibility_score = percentage,
+                reason = bestMatchReasons
             )
             
             AuthResult.Success(response)

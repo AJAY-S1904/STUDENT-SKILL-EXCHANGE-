@@ -5,7 +5,9 @@ import com.google.firebase.database.IgnoreExtraProperties
 @IgnoreExtraProperties
 data class Rating(
     val id: String = "",
-    val sessionId: String = "",
+    val sessionId: String = "", // Legacy or keeping for compatibility
+    val meetingId: String = "",
+    val exchangeId: String = "",
     val raterId: String = "",
     val raterName: String = "",
     val raterProfilePic: String = "",

@@ -37,6 +37,7 @@ fun DashboardScreen(
     onNavigateToStudentProfile: (String) -> Unit,
     onNavigateToNotifications: () -> Unit,
     onNavigateToSessions: () -> Unit,
+    onNavigateToTools: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -124,6 +125,35 @@ fun DashboardScreen(
         }
 
         item { Spacer(Modifier.height(20.dp)) }
+
+        // ── Tools Section ──────────────────────────────────────────────────
+        item {
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { onNavigateToTools() },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("🛠️ Tools", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Improve, plan and showcase your skills", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Button(
+                            onClick = onNavigateToTools,
+                            shape = RoundedCornerShape(12.dp)
+                        ) { Text("Explore Tools") }
+                    }
+                }
+            }
+        }
+
+        item { Spacer(Modifier.height(16.dp)) }
 
         // ── AI Matching Banner ─────────────────────────────────────────────
         item {

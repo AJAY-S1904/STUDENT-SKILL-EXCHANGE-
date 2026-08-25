@@ -12,6 +12,7 @@ import javax.inject.Inject
 data class SkillUiState(
     val teachSkills: List<String> = emptyList(),
     val learnSkills: List<String> = emptyList(),
+    val verifiedSkills: List<String> = emptyList(),
     val isLoading: Boolean = false,
     val successMessage: String? = null
 )
@@ -32,7 +33,8 @@ class SkillViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         teachSkills = user?.teachSkills ?: emptyList(),
-                        learnSkills = user?.learnSkills ?: emptyList()
+                        learnSkills = user?.learnSkills ?: emptyList(),
+                        verifiedSkills = user?.verifiedSkills ?: emptyList()
                     )
                 }
             }
